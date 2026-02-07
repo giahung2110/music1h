@@ -1,170 +1,174 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Web Nghe Nhạc YouTube 1 Giờ</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Neon Music Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body {
-            margin: 0;
-            height: 100vh;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, sans-serif;
-            color: #fff;
-        }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap');
 
-        .box {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 25px;
-            border-radius: 14px;
-            width: 360px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
+* {
+  box-sizing: border-box;
+}
 
-        h2 {
-            margin-bottom: 15px;
-        }
+body {
+  margin: 0;
+  height: 100vh;
+  background: radial-gradient(circle at top, #0f0c29, #302b63, #24243e);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+  overflow: hidden;
+}
 
-        input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            outline: none;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
+/* Neon glow background */
+body::before {
+  content: "";
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: #00ffff;
+  filter: blur(150px);
+  opacity: 0.2;
+  animation: float 6s infinite alternate;
+}
 
-        button {
-            padding: 10px 14px;
-            margin: 5px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
+@keyframes float {
+  from { transform: translate(-50px, -50px); }
+  to   { transform: translate(50px, 50px); }
+}
 
-        .play { background: #1db954; color: #000; }
-        .replay { background: #ffb703; color: #000; }
-        .stop { background: #e63946; color: #fff; }
+.player {
+  position: relative;
+  background: rgba(0,0,0,0.7);
+  padding: 24px;
+  border-radius: 16px;
+  width: 340px;
+  text-align: center;
+  box-shadow:
+    0 0 20px #00ffff,
+    0 0 40px rgba(0,255,255,.3);
+}
 
-        #status {
-            margin-top: 12px;
-            font-size: 14px;
-            opacity: 0.9;
-        }
+.player h2 {
+  margin-bottom: 15px;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+}
 
-        /* Ẩn video */
-        #player {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            left: -9999px;
-            top: -9999px;
-        }
-    </style>
+input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background: #111;
+  color: #0ff;
+  box-shadow: inset 0 0 10px rgba(0,255,255,.4);
+}
+
+.buttons {
+  margin-top: 15px;
+}
+
+button {
+  margin: 6px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Orbitron', sans-serif;
+  cursor: pointer;
+  transition: 0.2s;
+  color: #fff;
+}
+
+.play {
+  background: #00ff9c;
+  box-shadow: 0 0 10px #00ff9c;
+}
+
+.replay {
+  background: #f1c40f;
+  box-shadow: 0 0 10px #f1c40f;
+}
+
+.stop {
+  background: #ff004c;
+  box-shadow: 0 0 10px #ff004c;
+}
+
+button:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px currentColor;
+}
+
+#status {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #0ff;
+}
+
+iframe {
+  display: none;
+}
+</style>
 </head>
+
 <body>
 
-<div class="box">
-    <h2>🎧 Web Nghe Nhạc 1 Giờ</h2>
+<div class="player">
+  <h2>🎧 NEON MUSIC</h2>
 
-    <input id="ytLink" type="text" placeholder="Dán link YouTube vào đây">
+  <input id="yt" placeholder="Dán link YouTube vào đây">
 
-    <div>
-        <button class="play" onclick="startMusic()">▶ Bắt đầu phát</button>
-        <button class="replay" onclick="replayMusic()">🔁 Phát lại</button>
-        <button class="stop" onclick="stopMusic()">⏹ Dừng</button>
-    </div>
+  <div class="buttons">
+    <button class="play" onclick="start()">▶ PLAY</button>
+    <button class="replay" onclick="replay()">🔁 REPLAY</button>
+    <button class="stop" onclick="stop()">⏹ STOP</button>
+  </div>
 
-    <div id="status">⏳ Chưa phát</div>
+  <div id="status">Chưa phát</div>
 </div>
 
-<div id="player"></div>
-
-<script src="https://www.youtube.com/iframe_api"></script>
+<iframe id="player" allow="autoplay; encrypted-media"></iframe>
 
 <script>
-    let player;
-    let stopTimer;
+let timer;
 
-    function extractVideoId(url) {
-        const regExp = /(?:youtube\.com\/.*v=|youtu\.be\/)([^&]+)/;
-        const match = url.match(regExp);
-        return match ? match[1] : null;
-    }
+function getId(url) {
+  const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+  return match ? match[1] : null;
+}
 
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-            height: '1',
-            width: '1',
-            videoId: '',
-            playerVars: {
-                autoplay: 0,
-                controls: 0,
-                mute: 0
-            },
-            events: {
-                onStateChange: onPlayerStateChange
-            }
-        });
-    }
+function start() {
+  const url = document.getElementById("yt").value;
+  const id = getId(url);
+  if (!id) return alert("Link YouTube không hợp lệ!");
 
-    function startMusic() {
-        const link = document.getElementById("ytLink").value;
-        const videoId = extractVideoId(link);
+  const iframe = document.getElementById("player");
+  iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=0`;
 
-        if (!videoId) {
-            alert("Link YouTube không hợp lệ!");
-            return;
-        }
+  document.getElementById("status").innerText = "🎶 Đang phát (1 giờ)";
+  clearTimeout(timer);
 
-        clearTimeout(stopTimer);
+  timer = setTimeout(() => {
+    stop();
+    document.getElementById("status").innerText = "⏰ Hết 1 giờ";
+  }, 3600000);
+}
 
-        player.loadVideoById(videoId);
+function replay() {
+  start();
+}
 
-        // MỞ TIẾNG (BẮT BUỘC)
-        setTimeout(() => {
-            player.unMute();
-            player.setVolume(100);
-        }, 500);
-
-        document.getElementById("status").innerText =
-            "🎶 Đang phát (lặp trong 1 tiếng)";
-
-        // DỪNG SAU 1 TIẾNG
-        stopTimer = setTimeout(() => {
-            stopMusic();
-            document.getElementById("status").innerText =
-                "⏰ Hết 1 tiếng, đã dừng";
-        }, 3600000);
-    }
-
-    function replayMusic() {
-        player.seekTo(0);
-        player.playVideo();
-        document.getElementById("status").innerText =
-            "🔁 Phát lại bài nhạc";
-    }
-
-    function stopMusic() {
-        clearTimeout(stopTimer);
-        if (player) player.stopVideo();
-        document.getElementById("status").innerText =
-            "⏹ Đã dừng";
-    }
-
-    function onPlayerStateChange(event) {
-        // Hết bài → phát lại (trong 1 tiếng)
-        if (event.data === YT.PlayerState.ENDED) {
-            player.playVideo();
-        }
-    }
+function stop() {
+  document.getElementById("player").src = "";
+  document.getElementById("status").innerText = "⏹ Đã dừng";
+  clearTimeout(timer);
+}
 </script>
 
 </body>
