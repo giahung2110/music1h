@@ -4,59 +4,46 @@
 <meta charset="UTF-8">
 <title>Neon Music Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap');
-
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   height: 100vh;
-  background: radial-gradient(circle at top, #0f0c29, #302b63, #24243e);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: 'Orbitron', sans-serif;
-  color: #fff;
+  background: #060818;
   overflow: hidden;
+  font-family: 'Orbitron', sans-serif;
+  color: #0ff;
 }
 
-/* Neon glow background */
-body::before {
-  content: "";
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  background: #00ffff;
-  filter: blur(150px);
-  opacity: 0.2;
-  animation: float 6s infinite alternate;
+/* Canvas nền */
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
 }
 
-@keyframes float {
-  from { transform: translate(-50px, -50px); }
-  to   { transform: translate(50px, 50px); }
-}
-
+/* Player */
 .player {
-  position: relative;
-  background: rgba(0,0,0,0.7);
-  padding: 24px;
-  border-radius: 16px;
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 340px;
+  height: 260px;
+  background: rgba(0,0,0,.65);
+  border-radius: 18px;
+  padding: 22px;
   text-align: center;
-  box-shadow:
-    0 0 20px #00ffff,
-    0 0 40px rgba(0,255,255,.3);
+  box-shadow: 0 0 25px #0ff;
 }
 
-.player h2 {
-  margin-bottom: 15px;
-  color: #00ffff;
-  text-shadow: 0 0 10px #00ffff;
+h2 {
+  margin: 0 0 14px;
+  color: #0ff;
+  text-shadow: 0 0 12px #0ff;
 }
 
 input {
@@ -65,108 +52,133 @@ input {
   border-radius: 8px;
   border: none;
   outline: none;
-  background: #111;
+  background: #020617;
   color: #0ff;
   box-shadow: inset 0 0 10px rgba(0,255,255,.4);
 }
 
 .buttons {
-  margin-top: 15px;
+  margin-top: 14px;
 }
 
 button {
-  margin: 6px;
-  padding: 10px 14px;
+  padding: 9px 14px;
+  margin: 5px;
   border: none;
   border-radius: 8px;
   font-family: 'Orbitron', sans-serif;
   cursor: pointer;
-  transition: 0.2s;
+  transition: .2s;
   color: #fff;
 }
 
-.play {
-  background: #00ff9c;
-  box-shadow: 0 0 10px #00ff9c;
-}
-
-.replay {
-  background: #f1c40f;
-  box-shadow: 0 0 10px #f1c40f;
-}
-
-.stop {
-  background: #ff004c;
-  box-shadow: 0 0 10px #ff004c;
-}
+.play { background:#00ff9c; box-shadow:0 0 12px #00ff9c; }
+.replay { background:#f1c40f; box-shadow:0 0 12px #f1c40f; }
+.stop { background:#ff004c; box-shadow:0 0 12px #ff004c; }
 
 button:hover {
   transform: scale(1.08);
-  box-shadow: 0 0 20px currentColor;
 }
 
 #status {
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 13px;
-  color: #0ff;
 }
 
-iframe {
-  display: none;
-}
+iframe { display: none; }
 </style>
 </head>
 
 <body>
 
+<canvas id="bg"></canvas>
+
 <div class="player">
   <h2>🎧 NEON MUSIC</h2>
-
   <input id="yt" placeholder="Dán link YouTube vào đây">
-
   <div class="buttons">
     <button class="play" onclick="start()">▶ PLAY</button>
     <button class="replay" onclick="replay()">🔁 REPLAY</button>
     <button class="stop" onclick="stop()">⏹ STOP</button>
   </div>
-
   <div id="status">Chưa phát</div>
 </div>
 
-<iframe id="player" allow="autoplay; encrypted-media"></iframe>
+<iframe id="player" allow="autoplay"></iframe>
 
 <script>
+/* ================= PARTICLE RGB ================= */
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+let w, h, particles = [];
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+window.onresize = resize;
+resize();
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random()*w;
+    this.y = Math.random()*h;
+    this.vx = (Math.random()-.5)*0.6;
+    this.vy = (Math.random()-.5)*0.6;
+    this.size = Math.random()*2+1;
+    this.hue = Math.random()*360;
+  }
+  draw() {
+    ctx.fillStyle = `hsla(${this.hue},100%,60%,0.8)`;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fill();
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.hue += 0.6;
+    if (this.x<0||this.x>w||this.y<0||this.y>h) this.reset();
+    this.draw();
+  }
+}
+
+for(let i=0;i<120;i++) particles.push(new Particle());
+
+function animate() {
+  ctx.fillStyle = "rgba(6,8,24,0.25)";
+  ctx.fillRect(0,0,w,h);
+  particles.forEach(p=>p.update());
+  requestAnimationFrame(animate);
+}
+animate();
+
+/* ================= MUSIC ================= */
 let timer;
 
-function getId(url) {
-  const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-  return match ? match[1] : null;
+function getId(url){
+  const m = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+  return m?m[1]:null;
 }
 
-function start() {
-  const url = document.getElementById("yt").value;
-  const id = getId(url);
-  if (!id) return alert("Link YouTube không hợp lệ!");
-
-  const iframe = document.getElementById("player");
-  iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=0`;
-
-  document.getElementById("status").innerText = "🎶 Đang phát (1 giờ)";
+function start(){
+  const id = getId(yt.value);
+  if(!id) return alert("Link YouTube không hợp lệ!");
+  player.src =
+    `https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}`;
+  status.innerText = "🎶 Đang phát (lặp 1 giờ)";
   clearTimeout(timer);
-
-  timer = setTimeout(() => {
-    stop();
-    document.getElementById("status").innerText = "⏰ Hết 1 giờ";
-  }, 3600000);
+  timer = setTimeout(stop, 3600000);
 }
 
-function replay() {
-  start();
-}
+function replay(){ start(); }
 
-function stop() {
-  document.getElementById("player").src = "";
-  document.getElementById("status").innerText = "⏹ Đã dừng";
+function stop(){
+  player.src = "";
+  status.innerText = "⏹ Đã dừng";
   clearTimeout(timer);
 }
 </script>
